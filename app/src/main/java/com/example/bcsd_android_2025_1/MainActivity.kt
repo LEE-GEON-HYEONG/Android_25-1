@@ -1,80 +1,77 @@
 package com.example.bcsd_android_2025_1
 
 import android.os.Bundle
-import android.widget.Toast
-import android.widget.Button
-import android.widget.TextView
-import android.app.Activity
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import android.graphics.drawable.ColorDrawable
-import androidx.core.content.ContextCompat
-import android.app.AlertDialog
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
-
-    private var count = 0
-    private lateinit var numberTextView: TextView
+    private lateinit var nameList: MutableList<String>
+    private lateinit var adapter: Adapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        supportActionBar?.setBackgroundDrawable(
-            ColorDrawable(ContextCompat.getColor(this, R.color.darkblue))
+        nameList = mutableListOf()
+
+        adapter = Adapter(
+            nameList,
+            onClick = { pos -> deleteDialog(pos) },
+            onLongClick = { pos -> editDialog(pos) }
         )
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        val editText = findViewById<EditText>(R.id.editTextName)
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+        val buttonAdd = findViewById<FloatingActionButton>(R.id.buttonAdd)
 
-        numberTextView = findViewById(R.id.textview_numberview)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
 
-        val toastButton: Button = findViewById(R.id.button_toast)
-        val countButton: Button = findViewById(R.id.button_count)
-        val randomButton: Button = findViewById(R.id.button_random)
-
-        toastButton.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("알림")
-                .setMessage("버튼 띄우기")
-                .setPositiveButton("Positive") { _, _ ->
-                    count = 0
-                    numberTextView.text = count.toString()
-                }
-                .setNeutralButton("Neutral") { _, _ ->
-                    Toast.makeText(this, "neutral 버튼 클릭", Toast.LENGTH_SHORT).show()
-                }
-                .setNegativeButton("Negative", null)
-                .show()
-        }
-
-        countButton.setOnClickListener {
-            count++
-            numberTextView.text = count.toString()
-        }
-
-        supportFragmentManager.setFragmentResultListener("randomResult", this) { _, bundle ->
-            val randomNumber = bundle.getInt("randomNumber", count)
-            count = randomNumber
-            numberTextView.text = count.toString()
-        }
-
-        randomButton.setOnClickListener {
-            val fragment = SecondFragment.newInstance(count)
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.main, fragment)
-                .addToBackStack(null)
-                .commit()
+        buttonAdd.setOnClickListener {
+            val name = editText.text.toString()
+            nameList.add(name)
+            adapter.notifyItemInserted(nameList.size - 1)
+            recyclerView.scrollToPosition(nameList.size - 1)
+            editText.text.clear()
         }
     }
 
+    private fun deleteDialog(position: Int) {
+        AlertDialog.Builder(this)
+            .setTitle("이름 목록 삭제하기")
+            .setMessage("이름 목록을 삭제해보자.")
+            .setPositiveButton("삭제") { dialog, _ ->
+                nameList.removeAt(position)
+                adapter.notifyItemRemoved(position)
+                dialog.dismiss()
+            }
+            .setNegativeButton("취소") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
 
+    private fun editDialog(pos: Int) {
+        val input = EditText(this).apply {
+            setText(nameList[pos])
+        }
 
+        AlertDialog.Builder(this)
+            .setTitle("이름 편집")
+            .setView(input)
+            .setPositiveButton("확인") { dialog, _ ->
+                val newName = input.text.toString()
+                nameList[pos] = newName
+                adapter.notifyItemChanged(pos)
+                dialog.dismiss()
+            }
+            .setNegativeButton("취소") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
 }
